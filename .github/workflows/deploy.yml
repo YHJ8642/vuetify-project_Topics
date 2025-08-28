@@ -22,6 +22,7 @@ jobs:
           npm install
           npm run build
         env:
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
       # 步驟三：部署
       - name: Deploy
