@@ -28,11 +28,11 @@
       >
         <Marker
           v-for="(m, i) in markers"
-          :key="i"
+          :key="m._id"
           :options="{
             position: m.position,
             label: {
-              text: m.comments?.length.toString(),
+              text: m.comments?.length?.toString() || '0',
               color: 'white',
               fontSize: '14px',
               fontWeight: 'bold',
@@ -68,7 +68,7 @@
                 <v-list>
                   <v-list-item
                     v-for="(c, idx) in activeComments"
-                    :key="idx"
+                    :key="c._id"
                     :prepend-avatar="`https://api.dicebear.com/9.x/thumbs/png/seed=${c.user}`"
                     class="hoverable"
                     @click="handleCommentClick(c, idx)"
@@ -109,10 +109,7 @@
                 class="mt-2"
                 outlined
                 dense
-                :style="{
-                  borderRadius: '8px',
-                  backgroundColor: '#f5f5f5',
-                }"
+                :style="{ borderRadius: '8px', backgroundColor: '#f5f5f5' }"
               />
             </v-card-text>
             <v-card-actions>
@@ -140,10 +137,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { GoogleMap, Marker } from "vue3-google-map";
 import { useUserStore } from "@/stores/user";
-import { v4 as uuidv4 } from "uuid";
+import markerService from "@/services/marker.js";
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const userStore = useUserStore();
@@ -152,7 +149,6 @@ const userName = userStore.isLoggedIn ? userStore.account : null;
 const center = ref({ lat: 25.033964, lng: 121.564468 });
 const markers = ref([]);
 const activeMarker = ref(null);
-
 const commentDialog = ref(false);
 const newComment = ref("");
 const activeComments = ref([]);
@@ -162,18 +158,15 @@ let autocomplete = null;
 
 const userColors = {};
 function getUserColor(user) {
-  if (!userColors[user]) {
-    const color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
-    userColors[user] = color;
-  }
+  if (!userColors[user])
+    userColors[user] = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
   return userColors[user];
 }
 
 function waitForGoogleMaps() {
   return new Promise((resolve) => {
-    if (window.google?.maps?.places) {
-      resolve();
-    } else {
+    if (window.google?.maps?.places) resolve();
+    else {
       const interval = setInterval(() => {
         if (window.google?.maps?.places) {
           clearInterval(interval);
@@ -184,36 +177,18 @@ function waitForGoogleMaps() {
   });
 }
 
+async function fetchMarkers() {
+  try {
+    const res = await markerService.getMarkers();
+    markers.value = res.data.result || [];
+  } catch (err) {
+    console.error("取得標籤失敗:", err);
+  }
+}
+
 onMounted(async () => {
-  const saved = localStorage.getItem("markers");
-  markers.value = saved ? JSON.parse(saved) : [];
-
+  await fetchMarkers();
   await waitForGoogleMaps();
-
-  // ✅ 自動補上 address（僅針對沒 address 的舊資料）
-  const geocoder = new google.maps.Geocoder();
-  const updates = markers.value.map((m) => {
-    return new Promise((resolve) => {
-      if (!m.address) {
-        geocoder.geocode({ location: m.position }, (results, status) => {
-          if (status === "OK" && results[0]) {
-            m.address = results[0].formatted_address;
-          } else {
-            m.address = `${m.position.lat.toFixed(5)}, ${m.position.lng.toFixed(
-              5
-            )}`;
-          }
-          resolve();
-        });
-      } else {
-        resolve();
-      }
-    });
-  });
-
-  await Promise.all(updates);
-  saveMarkers();
-
   if (addressInput.value) {
     autocomplete = new google.maps.places.Autocomplete(
       addressInput.value.$el.querySelector("input")
@@ -222,34 +197,30 @@ onMounted(async () => {
   }
 });
 
-function addMarker(event) {
-  if (!userName) {
-    alert("請先登入才能新增標籤");
-    return;
-  }
+async function addMarker(event) {
+  if (!userName) return alert("請先登入");
 
   const lat = event.latLng.lat();
   const lng = event.latLng.lng();
-  const confirmAdd = window.confirm("確定要在這個位置新增標籤嗎？");
-  if (!confirmAdd) return;
+  if (!window.confirm("確定新增標籤？")) return;
 
   const geocoder = new google.maps.Geocoder();
-  geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-    let address = "";
-    if (status === "OK" && results[0]) {
-      address = results[0].formatted_address;
-    } else {
-      address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  geocoder.geocode({ location: { lat, lng } }, async (results, status) => {
+    const address =
+      status === "OK" && results[0]
+        ? results[0].formatted_address
+        : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    try {
+      const res = await markerService.addMarker({
+        position: { lat, lng },
+        address,
+        owner: userName,
+      });
+      markers.value.push(res.data.result);
+    } catch (err) {
+      console.error(err);
+      alert("新增標籤失敗");
     }
-
-    markers.value.push({
-      position: { lat, lng },
-      address,
-      comments: [],
-      owner: userName,
-    });
-
-    saveMarkers();
   });
 }
 
@@ -258,7 +229,6 @@ function openCommentDialog(index) {
   activeComments.value = markers.value[index].comments || [];
   commentDialog.value = true;
 }
-
 function closeCommentDialog() {
   commentDialog.value = false;
   newComment.value = "";
@@ -266,92 +236,85 @@ function closeCommentDialog() {
   activeMarker.value = null;
 }
 
-function saveMarkers() {
-  localStorage.setItem("markers", JSON.stringify(markers.value));
-}
-
-function addComment() {
-  if (!userName) {
-    alert("請先登入才能留言");
-    return;
+async function addComment() {
+  if (!userName || !newComment.value.trim()) return;
+  const marker = markers.value[activeMarker.value];
+  try {
+    const res = await markerService.addComment(marker._id, {
+      user: userName,
+      content: newComment.value,
+    });
+    marker.comments.push(res.data.result);
+    activeComments.value = marker.comments;
+    newComment.value = "";
+  } catch (err) {
+    console.error(err);
+    alert("新增留言失敗");
   }
-  if (!newComment.value.trim()) return;
-
-  const comment = {
-    id: uuidv4(),
-    user: userName,
-    content: newComment.value,
-    createdAt: new Date().toISOString(),
-  };
-  markers.value[activeMarker.value].comments.push(comment);
-  newComment.value = "";
-  saveMarkers();
 }
 
-function deleteComment(idx) {
+async function deleteComment(idx) {
   if (activeMarker.value === null) return;
-  markers.value[activeMarker.value].comments.splice(idx, 1);
-  activeComments.value = markers.value[activeMarker.value].comments;
-  saveMarkers();
+  const marker = markers.value[activeMarker.value];
+  const comment = marker.comments[idx];
+  try {
+    await markerService.deleteComment(marker._id, comment._id, {
+      user: userName,
+    });
+    marker.comments.splice(idx, 1);
+    activeComments.value = marker.comments;
+  } catch (err) {
+    console.error(err);
+    alert("刪除留言失敗");
+  }
 }
-
-function handleCommentClick(comment, idx) {
+function handleCommentClick(comment, index) {
   if (comment.user !== userName) return;
 
-  const confirmed = window.confirm("確定要刪除這則留言嗎？");
-  if (confirmed) {
-    deleteComment(idx);
+  if (window.confirm("確定要刪除這則留言嗎？")) {
+    deleteComment(index);
   }
 }
 
-function deleteMarker() {
+async function deleteMarker() {
   if (activeMarker.value === null) return;
-
   const marker = markers.value[activeMarker.value];
-  if (marker.owner !== userName) {
-    alert("你不是這個標籤的建立者，無法刪除");
-    return;
+  if (marker.owner !== userName) return alert("你不是標籤建立者");
+  if (!window.confirm("確定刪除標籤？")) return;
+  try {
+    await markerService.deleteMarker(marker._id);
+    markers.value.splice(activeMarker.value, 1);
+    closeCommentDialog();
+  } catch (err) {
+    console.error(err);
+    alert("刪除標籤失敗");
   }
-
-  markers.value.splice(activeMarker.value, 1);
-  closeCommentDialog();
-  saveMarkers();
 }
 
-function selectPlace() {
-  if (!userName) {
-    alert("請先登入才能新增標籤");
-    return;
-  }
-
+async function selectPlace() {
+  if (!userName) return alert("請先登入");
   if (!autocomplete) return;
   const place = autocomplete.getPlace();
-  if (!place.geometry) {
-    alert("找不到該地址，請確認輸入是否正確");
-    return;
-  }
-
+  if (!place.geometry) return alert("找不到該地址");
   const lat = place.geometry.location.lat();
   const lng = place.geometry.location.lng();
   const address =
     place.formatted_address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-
-  const confirmAdd = window.confirm(`確定要在 ${address} 建立標籤嗎？`);
-  if (!confirmAdd) return;
-
-  markers.value.push({
-    position: { lat, lng },
-    address,
-    comments: [],
-    owner: userName,
-  });
-
-  center.value = { lat, lng };
-  saveMarkers();
-  searchAddress.value = "";
+  if (!window.confirm(`確定新增標籤 ${address}？`)) return;
+  try {
+    const res = await markerService.addMarker({
+      position: { lat, lng },
+      address,
+      owner: userName,
+    });
+    markers.value.push(res.data.result);
+    center.value = { lat, lng };
+    searchAddress.value = "";
+  } catch (err) {
+    console.error(err);
+    alert("新增標籤失敗");
+  }
 }
-
-watch(markers, saveMarkers, { deep: true });
 </script>
 
 <style scoped>
