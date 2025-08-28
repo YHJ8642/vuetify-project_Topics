@@ -6,13 +6,13 @@
 
 import { setupLayouts } from 'virtual:generated-layouts'
 // Composables
-import { createRouter, createWebHistory, START_LOCATION } from 'vue-router/auto'
+import { createRouter, createWebHashHistory, START_LOCATION } from 'vue-router/auto'
 import { routes } from 'vue-router/auto-routes'
 import userService from '@/services/user'
 import { useUserStore } from '@/stores/user'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: setupLayouts(routes),
 })
 router.beforeEach(async (to, from, next) => {
