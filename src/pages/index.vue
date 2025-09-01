@@ -86,6 +86,7 @@
         <v-row v-if="visiblePosts.length > 0" style="width: 100%">
           <v-col
             v-for="post in visiblePosts"
+            :id="`post-${post._id}`"
             :key="post._id"
             cols="12"
             md="6"
@@ -280,19 +281,23 @@
                   marginBottom: '4px',
                 }"
               >
-                <v-list-item-content>
-                  <v-list-item-title class="font-weight-bold">
-                    {{ comment.user.account || "匿名用戶" }}
-                    <span
-                      class="text-caption grey--text"
-                      style="margin-left: 8px"
-                      >{{ new Date(comment.createdAt).toLocaleString() }}</span
-                    >
-                  </v-list-item-title>
-                  <v-list-item-subtitle>{{
-                    comment.content
-                  }}</v-list-item-subtitle>
-                </v-list-item-content>
+                <v-list-item>
+                  <div>
+                    <v-list-item-title class="font-weight-bold">
+                      {{ comment.user.account || "匿名用戶" }}
+                      <span
+                        class="text-caption grey--text"
+                        style="margin-left: 8px"
+                        >{{
+                          new Date(comment.createdAt).toLocaleString()
+                        }}</span
+                      >
+                    </v-list-item-title>
+                    <v-list-item-subtitle>{{
+                      comment.content
+                    }}</v-list-item-subtitle>
+                  </div>
+                </v-list-item>
 
                 <v-list-item-action
                   v-if="userStore?.account === comment.user.account"
@@ -337,7 +342,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useSnackbar } from "vuetify-use-dialog";
 import productService from "@/services/article";
 import commentService from "@/services/comment";
@@ -436,6 +441,7 @@ const closeCommentDialog = () => {
   selectedCommentsPost.value = null;
   newComment.value = "";
   comments.value = [];
+  router.replace({ query: {} });
 };
 
 const addComment = async () => {
@@ -664,6 +670,7 @@ const logout = () => {
   userStore.logout();
   favoriteStore.favorites = [];
 };
+const route = useRoute();
 
 onMounted(async () => {
   await getProducts();
@@ -676,8 +683,44 @@ onMounted(async () => {
     );
   } else userStore.setFavorites(0);
   setupInfiniteScroll();
+  if (route.query.id && route.query.showComments) {
+    const target = products.value.find((p) => p._id === route.query.id);
+    if (target) {
+      openCommentDialog(target);
+    }
+  }
 });
+watch(
+  [() => route.query, filteredProducts, visiblePosts],
+  async ([query, posts, vPosts]) => {
+    if (query.id && query.showComments && posts.length > 0) {
+      const idx = posts.findIndex((p) => p._id === query.id);
+      if (idx !== -1) {
+        // 強制顯示該文章
+        if (visibleCount.value < idx + 1) {
+          visibleCount.value = idx + 1;
+          await nextTick();
+        }
+        const target = posts[idx];
+        openCommentDialog(target);
 
+        // 等待 DOM 出現再滾動
+        let tryCount = 0;
+        const scrollToCard = () => {
+          const el = document.getElementById(`post-${target._id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          } else if (tryCount < 10) {
+            tryCount++;
+            setTimeout(scrollToCard, 100);
+          }
+        };
+        scrollToCard();
+      }
+    }
+  },
+  { immediate: true }
+);
 watch([search, selectedCategory, selectedSort], resetFeed);
 </script>
 

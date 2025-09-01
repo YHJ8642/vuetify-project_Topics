@@ -73,7 +73,17 @@
             item.title
           }}</v-card-title>
           <v-card-subtitle class="text-truncate">
-            {{ formatCategories(item.category) }} - {{ item.location }}
+            <v-chip
+              v-for="c in item.category"
+              :key="c"
+              size="small"
+              color="primary"
+              class="ml-1"
+            >
+              {{ c }}
+            </v-chip>
+            - 🕒
+            {{ new Date(item.createdAt).toLocaleString() }}
           </v-card-subtitle>
 
           <!-- <v-card-text class="description-text" @click="showDescription(item.description)">
@@ -82,11 +92,7 @@
 
           <!-- 懸停操作按鈕 -->
           <div v-if="item.hover" class="hover-actions">
-            <v-btn
-              small
-              color="primary"
-              @click="showDescription(item.description)"
-            >
+            <v-btn small color="primary" @click="showDescription(item)">
               <v-icon left>mdi-eye</v-icon>查看文章
             </v-btn>
             <v-btn small color="red" @click="removeFavorite(item._id)">
@@ -128,12 +134,31 @@
     </v-dialog>
 
     <!-- 文章內容 Dialog -->
-    <v-dialog v-model="descDialog.open" max-width="500px">
+    <v-dialog v-model="descDialog.open" max-width="600px">
       <v-card>
-        <v-card-title>文章內容</v-card-title>
+        <v-card-title class="dialog-title">{{
+          descDialog.title || "文章內容"
+        }}</v-card-title>
+        <v-card-text>
+          <v-icon start size="small" color="grey">mdi-source-branch</v-icon
+          >{{ descDialog.location }}</v-card-text
+        >
         <v-card-text>{{ descDialog.text }}</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <!-- 跳轉到貼文頁留言區 -->
+          <v-btn
+            color="teal"
+            text
+            :to="{
+              path: '/',
+              query: { id: descDialog.postId, showComments: true },
+            }"
+          >
+            <v-icon start>mdi-comment-outline</v-icon>
+            查看留言
+            {{ descDialog.postId ? "" : "(沒有文章)" }}
+          </v-btn>
           <v-btn text color="primary" @click="descDialog.open = false"
             >關閉</v-btn
           >
@@ -306,10 +331,14 @@ function showImage(src) {
   imageDialog.value.open = true;
 }
 
-const descDialog = ref({ open: false, text: "" });
-function showDescription(text) {
-  descDialog.value.text = text || "(沒有文章)";
+const descDialog = ref({ open: false, text: "", postId: null, title: "" });
+
+function showDescription(item) {
+  descDialog.value.text = item.description || "(沒有文章)";
   descDialog.value.open = true;
+  descDialog.value.postId = item._id || null;
+  descDialog.value.title = item.title || "文章內容";
+  descDialog.value.location = item.location || "";
 }
 
 // 文字截斷
@@ -401,6 +430,11 @@ watch([search, selectedCategory, sortOrder], () => {
   border-radius: 8px;
   margin-right: 10px;
   max-width: 250px;
+}
+.dialog-title {
+  white-space: normal; /* 允許換行 */
+  word-break: break-word; /* 長字或英文超出也會斷行 */
+  overflow: visible; /* 不要裁切 */
 }
 </style>
 <route lang="yaml">

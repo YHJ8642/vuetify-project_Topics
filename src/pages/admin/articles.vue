@@ -166,31 +166,35 @@
               @click="showImage(item.image)"
             />
             <div class="w-full">
-              <strong>{{ item.title }}</strong>
-              <v-chip
-                v-for="c in item.category"
-                :key="c"
-                size="x-small"
-                color="primary"
-                class="ml-1"
-              >
-                {{ c }}
-              </v-chip>
+              <div class="card-title-ellipsis">
+                <strong>{{ item.title }}</strong>
+              </div>
+              <div class="mt-1">
+                <v-chip
+                  v-for="c in item.category"
+                  :key="c"
+                  size="small"
+                  color="primary"
+                  class="ml-1"
+                >
+                  {{ c }}
+                </v-chip>
+              </div>
             </div>
           </v-card-title>
 
           <v-card-text>
+            <div class="text-caption text-grey">
+              🕒 {{ new Date(item.createdAt).toLocaleString() }}
+            </div>
+            <div class="mt-2 text-caption text-grey">
+              📍 {{ item.location }}
+            </div>
             <div
               class="text-truncate-2"
               @click="showDescription(item.description)"
             >
               {{ item.description || "(沒有文章)" }}
-            </div>
-            <div class="mt-2 text-caption text-grey">
-              📍 {{ item.location }}
-            </div>
-            <div class="text-caption text-grey">
-              🕒 {{ new Date(item.createdAt).toLocaleString() }}
             </div>
           </v-card-text>
 
@@ -570,6 +574,15 @@ function showDescription(text) {
   -webkit-line-clamp: 2; /* 限制 2 行 */
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.card-title-ellipsis {
+  font-weight: bold;
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90vw; /* 或 200px, 依需求調整 */
+  display: block;
 }
 </style>
 
