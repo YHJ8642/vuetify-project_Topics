@@ -1,0 +1,1 @@
+import{au as t}from"./index-Dh8x49RJ.js";const a={getAll(){return t.apiAuth.get("/favorites")},add(e){return t.apiAuth.post("/favorites",{postId:e})},remove(e){return t.apiAuth.delete(`/favorites/${e}`)}};export{a as f};
