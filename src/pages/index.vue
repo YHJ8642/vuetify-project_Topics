@@ -71,7 +71,7 @@
           v-if="filteredProducts.length === 0 && !loading"
           border="start"
           class="mb-6"
-          color="teal"
+          color="red lighten-4"
           prominent
           style="width: 100%"
           type="info"
@@ -145,7 +145,7 @@
                   incrementClick(post);
                 "
                 class="text-h6"
-                style="cursor: pointer; color: #26a69a"
+                style="cursor: pointer; color: rgb(0, 0, 0)"
               >
                 {{ post.title }}
               </v-card-subtitle>
@@ -749,7 +749,7 @@ watch([search, selectedCategory, selectedSort], resetFeed);
 
 .v-card-subtitle {
   font-weight: 500;
-  color: #26a69a;
+  color: black;
 }
 
 .v-progress-circular {
