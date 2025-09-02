@@ -139,16 +139,16 @@
               </v-card-title>
 
               <!-- 文章標題 -->
-              <v-card-subtitle
+              <v-card-title
                 @click="
                   openDialog(post);
                   incrementClick(post);
                 "
-                class="text-h6"
+                class="text-h6 text-center pa-0"
                 style="cursor: pointer; color: rgb(0, 0, 0)"
               >
                 {{ post.title }}
-              </v-card-subtitle>
+              </v-card-title>
 
               <!-- 內容預覽 -->
               <v-card-text class="pa-0">
