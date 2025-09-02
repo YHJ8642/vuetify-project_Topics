@@ -476,6 +476,8 @@ function openDialog(item) {
   } else {
     dialog.value.id = "";
     resetForm();
+    fileRecords.value = [];
+    rawFileRecords.value = [];
     fileAgent.value?.deleteAllFileRecords?.();
   }
   dialog.value.open = true;
