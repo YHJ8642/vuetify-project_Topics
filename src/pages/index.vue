@@ -92,7 +92,7 @@
             md="6"
             lg="4"
           >
-            <v-card class="pa-0" elevation="2" style="position: relative">
+            <v-card class="pa-0" style="position: relative">
               <!-- 顯示前三名標籤圖示 -->
               <template v-if="topCommentIds.includes(post._id)">
                 <v-icon
@@ -744,7 +744,7 @@ watch([search, selectedCategory, selectedSort], resetFeed);
 .v-card {
   background-color: #fff;
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
 }
 
 .v-card-subtitle {

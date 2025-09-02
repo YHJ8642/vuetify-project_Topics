@@ -26,7 +26,13 @@ const chartData = computed(() => {
   if (!props.posts || props.posts.length === 0) {
     return { labels: [], datasets: [{ data: [], backgroundColor: [] }] };
   }
-  const labels = props.posts.map((p) => p.title);
+
+  // legend / label 用裁切後的標題
+  const labels = props.posts.map((p) => {
+    const title = p.title || "未知文章";
+    return title.length > 10 ? title.slice(0, 10) + "..." : title;
+  });
+
   const data = props.posts.map((p) => p.clickCount || 0);
   const backgroundColor = generateColors(props.posts.length);
 
@@ -34,6 +40,8 @@ const chartData = computed(() => {
     labels,
     datasets: [
       {
+        // 保留完整標題 (tooltip 用)
+        fullTitles: props.posts.map((p) => p.title || "未知文章"),
         label: "文章點擊量",
         data,
         backgroundColor,
@@ -52,10 +60,11 @@ const chartOptions = reactive({
     tooltip: {
       callbacks: {
         label: function (context) {
-          const post = props.posts[context.dataIndex];
-          const title = post?.title || "未知文章";
-          const count = post?.clickCount || 0;
-          return `${title}: ${count} 次點擊`;
+          const dataset = context.dataset;
+          const fullTitle =
+            dataset.fullTitles?.[context.dataIndex] || "未知文章";
+          const count = context.raw || 0;
+          return `${fullTitle}: ${count} 次點擊`;
         },
       },
     },
@@ -63,7 +72,7 @@ const chartOptions = reactive({
   animation: {
     animateRotate: true,
     animateScale: true,
-    duration: 1500, // 1.5秒動畫
+    duration: 1500,
     easing: "easeOutQuart",
   },
 });
