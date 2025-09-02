@@ -465,7 +465,6 @@ const rawFileRecords = ref(null);
 
 function openDialog(item) {
   if (item) {
-    // 編輯貼文
     dialog.value.id = item._id;
     title.value.value = item.title;
     category.value.value = Array.isArray(item.category)
@@ -474,21 +473,11 @@ function openDialog(item) {
     description.value.value = item.description;
     location.value.value = item.location;
     release.value.value = item.release;
-
-    // 編輯時顯示現有圖片
-    fileRecords.value = item.image ? [{ file: null, url: item.image }] : [];
-    rawFileRecords.value = item.image ? [item.image] : [];
   } else {
-    // 新增貼文
     dialog.value.id = "";
     resetForm();
-
-    // 清空圖片
-    fileRecords.value = [];
-    rawFileRecords.value = [];
     fileAgent.value?.deleteAllFileRecords?.();
   }
-
   dialog.value.open = true;
 }
 
